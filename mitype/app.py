@@ -42,6 +42,8 @@ class App:
         self.text, self.text_id = resolve_commandline_arguments()
         self.tokens = self.text.split()
 
+        self.count = 0
+
         # Squash multiple spaces, tabs, newlines to single space
         self.text = " ".join(self.tokens)
         self.text_backup = self.text
@@ -76,7 +78,8 @@ class App:
 
         # Restrict current word length to a limit
         # Used to highlight once the limit is reached
-        self.current_word_limit = 25
+        # limit is set to the length of largest word in string + 5 for buffer
+        self.current_word_limit = len(max(self.tokens, key=len)) + 5
 
         self.test_complete = False
 
@@ -231,6 +234,7 @@ class App:
         self.clear_line(win, self.number_of_lines_to_print_text + 2)
         self.clear_line(win, self.number_of_lines_to_print_text + 4)
 
+        i = 7
         # Highlight in RED if word reaches the word limit length
         if len(self.current_word) >= self.current_word_limit:
             win.addstr(
@@ -240,14 +244,26 @@ class App:
                 self.Color.RED,
             )
         else:
-            win.addstr(self.number_of_lines_to_print_text, 0, self.current_word)
+            win.addstr(self.number_of_lines_to_print_text,
+                       0, self.current_word)
+            win.addstr(self.number_of_lines_to_print_text + i,
+                       0, "Count: " + str(self.count))
+            win.addstr(self.number_of_lines_to_print_text + i+1,
+                       0, "Total characters Typed: " + str(self.total_chars_typed))
 
         # Text is printed BOLD initially
         # It is dimmed as user types on top of it
         win.addstr(2, 0, self.text, curses.A_BOLD)
-        win.addstr(2, 0, self.text[0 : len(self.current_string)], curses.A_DIM)
+        win.addstr(2, 0, self.text[0: len(self.current_string)], curses.A_DIM)
 
-        index = first_index_at_which_strings_differ(self.current_string, self.text)
+        index = first_index_at_which_strings_differ(
+            self.current_string, self.text)
+        win.addstr(self.number_of_lines_to_print_text + i+2,
+                   0, "Index: " + str(index))
+        win.addstr(self.number_of_lines_to_print_text + i+3,
+                   0, self.text)
+        win.addstr(self.number_of_lines_to_print_text + i+5,
+                   0, "length of text: " + str(len(self.text_without_spaces)) + " " + str(self.current_word_limit))
         # Check if difference was found
         if index < len(self.current_string) <= len(self.text):
             self.mistyped_keys.append(len(self.current_string) - 1)
@@ -255,7 +271,7 @@ class App:
         win.addstr(
             2 + index // self.window_width,
             index % self.window_width,
-            self.text[index : len(self.current_string)],
+            self.text[index: len(self.current_string)],
             self.Color.RED,
         )
 
@@ -290,8 +306,10 @@ class App:
             self.current_speed_wpm = speed_in_wpm(self.tokens, self.start_time)
             total_chars_in_text = len(self.text_without_spaces)
             wrongly_typed_chars = self.total_chars_typed - total_chars_in_text
-            self.accuracy = accuracy(self.total_chars_typed, wrongly_typed_chars)
-            self.time_taken = get_elapsed_minutes_since_first_keypress(self.start_time)
+            self.accuracy = accuracy(
+                self.total_chars_typed, wrongly_typed_chars)
+            self.time_taken = get_elapsed_minutes_since_first_keypress(
+                self.start_time)
 
             self.mode = 1
             # Find time difference between the key strokes
@@ -301,7 +319,8 @@ class App:
 
             self.key_strokes[0][0] = 0
 
-        win.addstr(self.number_of_lines_to_print_text, 0, " Your typing speed is ")
+        win.addstr(self.number_of_lines_to_print_text,
+                   0, " Your typing speed is ")
         win.addstr(" " + self.current_speed_wpm + " ", self.Color.MAGENTA)
         win.addstr(" WPM ")
 
@@ -343,7 +362,8 @@ class App:
         self.start_time = 0
         if not self.test_complete:
             win.refresh()
-            save_history(self.text_id, self.current_speed_wpm, f"{self.accuracy:.2f}")
+            save_history(self.text_id, self.current_speed_wpm,
+                         f"{self.accuracy:.2f}")
             self.test_complete = True
 
     def typing_mode(self, win, key):
@@ -428,6 +448,7 @@ class App:
         elif is_valid_initial_key(key):
             self.appendkey(key)
             self.total_chars_typed += 1
+            self.count += 1
 
         # Update state of window
         self.update_state(win)
@@ -503,7 +524,8 @@ class App:
         """
         win.clear()
         self.print_stats(win)
-        win.addstr(self.number_of_lines_to_print_text + 2, 0, " " * self.window_width)
+        win.addstr(self.number_of_lines_to_print_text +
+                   2, 0, " " * self.window_width)
         curses.curs_set(1)
 
         win.addstr(
@@ -551,8 +573,10 @@ class App:
         self.token_index = 0
         self.current_speed_wpm = 0
         self.total_chars_typed = 0
+        self.count = 0
         self.accuracy = 0
         self.time_taken = 0
+        self.test_complete = False
         curses.curs_set(1)
 
     def switch_text(self, win, value):
@@ -593,7 +617,8 @@ class App:
     def screen_size_check(self):
         """Check if screen size is enough to print text."""
         self.number_of_lines_to_print_text = (
-            number_of_lines_to_fit_text_in_window(self.text, self.window_width) + 3
+            number_of_lines_to_fit_text_in_window(
+                self.text, self.window_width) + 3
         )
         if self.number_of_lines_to_print_text + 7 >= self.window_height:
             curses.endwin()
@@ -613,6 +638,7 @@ class App:
     def erase_key(self):
         """Erase the last typed character."""
         if len(self.current_word) > 0:
+            self.count -= 1
             self.current_word = self.current_word[:-1]
             self.current_string = self.current_string[:-1]
 
@@ -632,7 +658,8 @@ class App:
 
     def check_word(self):
         """Accept finalized word."""
-        spc = get_space_count_after_ith_word(len(self.current_string), self.text)
+        spc = get_space_count_after_ith_word(
+            len(self.current_string), self.text)
         if self.current_word == self.tokens[self.token_index]:
             self.token_index += 1
             self.current_word = ""
