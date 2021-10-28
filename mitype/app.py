@@ -5,8 +5,8 @@ import os
 import sys
 import time
 import webbrowser
-
 import mitype.signals
+
 from mitype.calculations import (
     accuracy,
     first_index_at_which_strings_differ,
@@ -143,6 +143,8 @@ class App:
 
                 # Replay
                 if is_enter(key):
+                    self.count = 0
+                    self.total_chars_typed = 0
                     self.replay(win)
 
                 # Tweet result
@@ -263,7 +265,7 @@ class App:
         win.addstr(self.number_of_lines_to_print_text + i+3,
                    0, self.text)
         win.addstr(self.number_of_lines_to_print_text + i+5,
-                   0, "length of text: " + str(len(self.text_without_spaces)) + " " + str(self.current_word_limit))
+                   0, "length of text: " + str(len(self.text_without_spaces)) + "\nLargest word length: " + str(self.current_word_limit))
         # Check if difference was found
         if index < len(self.current_string) <= len(self.text):
             self.mistyped_keys.append(len(self.current_string) - 1)
@@ -306,6 +308,8 @@ class App:
             self.current_speed_wpm = speed_in_wpm(self.tokens, self.start_time)
             total_chars_in_text = len(self.text_without_spaces)
             wrongly_typed_chars = self.total_chars_typed - total_chars_in_text
+            win.addstr(self.number_of_lines_to_print_text + 14,
+                       0, "Wrongly typed: " + str(wrongly_typed_chars))
             self.accuracy = accuracy(
                 self.total_chars_typed, wrongly_typed_chars)
             self.time_taken = get_elapsed_minutes_since_first_keypress(
